@@ -65,15 +65,28 @@
 
 #### Топология 1: Минимальная (3 узла)
 
-```
-┌──────────┐  ┌──────────┐  ┌──────────┐
-│ Узел 1   │  │ Узел 2   │  │ Узел 3   │
-│ MON+MGR  │  │ MON+MGR  │  │ MON+MGR  │
-│ OSD×4    │  │ OSD×4    │  │ OSD×4    │
-└──────────┘  └──────────┘  └──────────┘
-    ↑              ↑              ↑
-    └──────────────┴──────────────┘
-         10/25GbE public+cluster (единая сеть)
+```dot
+digraph G {
+    rankdir=TB;
+    bgcolor="white";
+    fontname="Arial";
+    fontcolor="black";
+    splines=ortho;
+    node [shape=box, style="filled,rounded", fontname="Arial", fontcolor="black"];
+    edge [fontname="Arial", fontcolor="black"];
+
+    node1 [label="Узел 1\nMON+MGR\nOSD×4", fillcolor="#BBDEFB"];
+    node2 [label="Узел 2\nMON+MGR\nOSD×4", fillcolor="#C8E6C9"];
+    node3 [label="Узел 3\nMON+MGR\nOSD×4", fillcolor="#FFE0B2"];
+
+    net [label="10/25GbE public+cluster\n(единая сеть)", shape=box, style="filled", fillcolor="#E0E0E0"];
+
+    {rank=same; node1; node2; node3;}
+
+    node1 -> net [dir=none];
+    node2 -> net [dir=none];
+    node3 -> net [dir=none];
+}
 ```
 
 - 3 узла, всё на каждом (гиперконвергентная топология)
@@ -83,14 +96,39 @@
 
 #### Топология 2: Средняя (5+ узлов)
 
-```
-┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-│ MON-1    │ │ MON-2    │ │ MON-3    │ │ OSD-1    │ │ OSD-2    │
-│ MGR      │ │ MGR      │ │ MGR      │ │ OSD×12   │ │ OSD×12   │
-└──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘
-    ↑              ↑              ↑           ↑            ↑
-    └──────────────┴──────────────┴───────────┴────────────┘
-         10/25GbE public ──── отдельно ──── 25/100GbE cluster
+```dot
+digraph G {
+    rankdir=TB;
+    bgcolor="white";
+    fontname="Arial";
+    fontcolor="black";
+    splines=ortho;
+    node [shape=box, style="filled,rounded", fontname="Arial", fontcolor="black"];
+    edge [fontname="Arial", fontcolor="black"];
+
+    mon1 [label="MON-1\nMGR", fillcolor="#BBDEFB"];
+    mon2 [label="MON-2\nMGR", fillcolor="#BBDEFB"];
+    mon3 [label="MON-3\nMGR", fillcolor="#BBDEFB"];
+    osd1 [label="OSD-1\nOSD×12", fillcolor="#C8E6C9"];
+    osd2 [label="OSD-2\nOSD×12", fillcolor="#C8E6C9"];
+
+    pub [label="10/25GbE public", shape=box, style="filled", fillcolor="#E3F2FD"];
+    clu [label="25/100GbE cluster", shape=box, style="filled", fillcolor="#FFECB3"];
+
+    {rank=same; mon1; mon2; mon3; osd1; osd2;}
+
+    mon1 -> pub [dir=none];
+    mon2 -> pub [dir=none];
+    mon3 -> pub [dir=none];
+    osd1 -> pub [dir=none];
+    osd2 -> pub [dir=none];
+
+    mon1 -> clu [dir=none];
+    mon2 -> clu [dir=none];
+    mon3 -> clu [dir=none];
+    osd1 -> clu [dir=none];
+    osd2 -> clu [dir=none];
+}
 ```
 
 - MON-узлы выделенные (3 шт.)
@@ -100,15 +138,36 @@
 
 #### Топология 3: Enterprise (10+ узлов, мульти-DC)
 
-```
-DC1 (Москва)                        DC2 (Санкт-Петербург)
-┌─────────────────────┐            ┌─────────────────────┐
-│ MON-1, MON-2, MON-3 │            │ MON-4, MON-5        │
-│ MGR×2, MDS×2        │            │ MGR (standby)       │
-│ OSD×12 (300 ТБ)     │◄──────────►│ OSD×12 (300 ТБ)     │
-│ RGW×2               │  синхр.    │ RGW×2               │
-└─────────────────────┘  сеть (lat └─────────────────────┘
-                         < 2 ms)
+```dot
+digraph {
+    bgcolor=white
+    rankdir=LR
+    node [fontname="Arial", fontsize=11, fontcolor=black, shape=box, style="filled,rounded"]
+    edge [fontname="Arial", fontsize=9, fontcolor=black, color="#555555", arrowsize=0.8]
+
+    subgraph cluster_dc1 {
+        label="DC1 (Москва)"
+        fontname="Arial" fontsize=12 fontcolor=black
+        color="#E3F2FD" style="filled"
+        mon1 [label="MON-1, MON-2, MON-3" fillcolor="#90CAF9"]
+        mgr1 [label="MGR×2, MDS×2" fillcolor="#90CAF9"]
+        osd1 [label="OSD×12 (300 ТБ)" fillcolor="#BBDEFB"]
+        rgw1 [label="RGW×2" fillcolor="#BBDEFB"]
+    }
+
+    subgraph cluster_dc2 {
+        label="DC2 (Санкт-Петербург)"
+        fontname="Arial" fontsize=12 fontcolor=black
+        color="#FFF3E0" style="filled"
+        mon2 [label="MON-4, MON-5" fillcolor="#FFCC80"]
+        mgr2 [label="MGR (standby)" fillcolor="#FFCC80"]
+        osd2 [label="OSD×12 (300 ТБ)" fillcolor="#FFE0B2"]
+        rgw2 [label="RGW×2" fillcolor="#FFE0B2"]
+    }
+
+    dc1_edge [label="синхр. сеть\n(lat < 2 ms)" shape=plaintext fontname="Arial" fontsize=10]
+    osd1 -> dc1_edge -> osd2 [dir=both, style=bold, color="#1976D2"]
+}
 ```
 
 - Два дата-центра с синхронной репликацией
@@ -178,20 +237,47 @@ eth1 ─┘
 
 Для HDD-OSD размещение WAL и DB на быстром NVMe даёт огромный прирост:
 
-```
-┌─────────────────────────────────────────────┐
-│ NVMe 1.6 ТБ                                  │
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐      │
-│ │ OSD 1    │ │ OSD 2    │ │ OSD 3    │ ...  │
-│ │ WAL: 2G  │ │ WAL: 2G  │ │ WAL: 2G  │      │
-│ │ DB:  30G │ │ DB:  30G │ │ DB:  30G │      │
-│ └──────────┘ └──────────┘ └──────────┘      │
-└─────────────────────────────────────────────┘
-         ↓              ↓              ↓
-┌──────────┐ ┌──────────┐ ┌──────────┐
-│ HDD 20T  │ │ HDD 20T  │ │ HDD 20T  │
-│ OSD 1    │ │ OSD 2    │ │ OSD 3    │
-└──────────┘ └──────────┘ └──────────┘
+```dot
+digraph {
+    bgcolor=white
+    rankdir=TB
+    node [fontname="Arial", fontsize=11, fontcolor=black, shape=box, style="filled,rounded"]
+    edge [fontname="Arial", fontsize=9, fontcolor=black, color="#555555", arrowsize=0.8]
+
+    subgraph cluster_nvme {
+        label="NVMe 1.6 ТБ"
+        fontname="Arial" fontsize=12 fontcolor=black
+        color="#E8EAF6" style="filled"
+        penwidth=2
+
+        subgraph cluster_osd1 {
+            label="OSD 1" fontname="Arial" fontsize=10
+            color="#C5CAE9" style="filled"
+            wal1 [label="WAL: 2G" fillcolor="#9FA8DA" fontsize=10]
+            db1  [label="DB: 30G" fillcolor="#9FA8DA" fontsize=10]
+        }
+        subgraph cluster_osd2 {
+            label="OSD 2" fontname="Arial" fontsize=10
+            color="#C5CAE9" style="filled"
+            wal2 [label="WAL: 2G" fillcolor="#9FA8DA" fontsize=10]
+            db2  [label="DB: 30G" fillcolor="#9FA8DA" fontsize=10]
+        }
+        subgraph cluster_osd3 {
+            label="OSD 3" fontname="Arial" fontsize=10
+            color="#C5CAE9" style="filled"
+            wal3 [label="WAL: 2G" fillcolor="#9FA8DA" fontsize=10]
+            db3  [label="DB: 30G" fillcolor="#9FA8DA" fontsize=10]
+        }
+    }
+
+    hdd1 [label="HDD 20 ТБ\nOSD 1" fillcolor="#FFCDD2"]
+    hdd2 [label="HDD 20 ТБ\nOSD 2" fillcolor="#FFCDD2"]
+    hdd3 [label="HDD 20 ТБ\nOSD 3" fillcolor="#FFCDD2"]
+
+    wal1 -> hdd1 [style=dashed, color="#C62828", label="WAL/DB\nссылка" fontsize=9]
+    wal2 -> hdd2 [style=dashed, color="#C62828"]
+    wal3 -> hdd3 [style=dashed, color="#C62828"]
+}
 ```
 
 **Расчёт:** один NVMe 1.6 ТБ может обслужить 40+ HDD-OSD (WAL 2 ГБ + DB 30 ГБ ≈ 32 ГБ на OSD). Но учтите: если NVMe выйдет из строя — все 40 OSD потеряют WAL/DB и потребуют восстановления.
@@ -405,52 +491,68 @@ BlueStore:   12 × 2 ГБ (SATA SSD-кеш)     = 24 ГБ
 
 #### Полная сетевая схема production-кластера
 
-```
-                         ┌──────────────────────────────┐
-     Клиенты (RBD, RGW) │      Сеть клиентов             │
-                         │      10.0.0.0/24              │
-                         └──────────┬───────────────────┘
-                                    │
-                         ┌──────────▼───────────────────┐
-                         │  Балансировщик / HAProxy      │
-                         │  (RGW, Dashboard)             │
-                         └──┬───────┬───────┬───────────┘
-                            │       │       │
-                    ┌───────▼───────▼───────▼───────┐
-                    │   Public Network (front)       │
-                    │   VLAN 101: 10.0.1.0/24       │
-                    │   25GbE LACP bonds             │
-                    └──┬───────┬───────┬────────────┘
-                       │       │       │
-              ┌────────▼┐ ┌───▼────┐ ┌▼────────┐
-              │ MON-1   │ │ MON-2  │ │ MON-3   │
-              │ .1.10   │ │ .1.11  │ │ .1.12   │
-              └────┬────┘ └───┬────┘ └────┬─────┘
-                   │          │          │
-    ═══════════════╪══════════╪══════════╪═══════════
-    Cluster Network│(back)    │          │
-    VLAN 102:      │          │          │
-    10.0.2.0/24    │          │          │
-    25/100GbE LACP │          │          │
-    ═══════════════╪══════════╪══════════╪═══════════
-                   │          │          │
-         ┌─────────▼┐  ┌──────▼──┐  ┌───▼───────┐
-         │ OSD-1    │  │ OSD-2   │  │ OSD-3     │
-         │ .2.20    │  │ .2.21   │  │ .2.22     │
-         │ 12× HDD  │  │ 12× HDD │  │ 12× HDD   │
-         │ 2× NVMe  │  │ 2× NVMe │  │ 2× NVMe   │
-         └──────────┘  └─────────┘  └───────────┘
-              │               │              │
-    ═══════════╪═══════════════╪══════════════╪═══════
-    Management  │               │              │
-    VLAN 999:   │               │              │
-    172.16.0.0/24              │              │
-    ═══════════╪═══════════════╪══════════════╪═══════
-              │               │              │
-         ┌────▼────┐     ┌────▼────┐    ┌────▼────┐
-         │ iDRAC/  │     │ iDRAC/  │    │ iDRAC/  │
-         │ IPMI    │     │ IPMI    │    │ IPMI    │
-         └─────────┘     └─────────┘    └─────────┘
+```dot
+digraph G {
+    rankdir=TB;
+    bgcolor="white";
+    fontname="Arial";
+    fontcolor="black";
+    splines=ortho;
+    compound=true;
+    node [shape=box, style="filled,rounded", fontname="Arial", fontcolor="black"];
+    edge [fontname="Arial", fontcolor="black"];
+
+    clients [label="Клиенты\n(RBD, RGW, CephFS)", fillcolor="#F3E5F5"];
+    cli_net [label="Сеть клиентов\n10.0.0.0/24", shape=box, style="filled", fillcolor="#E1BEE7"];
+
+    haproxy [label="Балансировщик / HAProxy\n(RGW, Dashboard)", fillcolor="#E8EAF6"];
+
+    pub_net [label="Public Network (front)\nVLAN 101: 10.0.1.0/24\n25GbE LACP bonds", shape=box, style="filled", fillcolor="#BBDEFB"];
+
+    mon1 [label="MON-1\n.1.10", fillcolor="#90CAF9"];
+    mon2 [label="MON-2\n.1.11", fillcolor="#90CAF9"];
+    mon3 [label="MON-3\n.1.12", fillcolor="#90CAF9"];
+
+    clu_net [label="Cluster Network (back)\nVLAN 102: 10.0.2.0/24\n25/100GbE LACP", shape=box, style="filled", fillcolor="#C8E6C9"];
+
+    osd1 [label="OSD-1\n.2.20\n12× HDD\n2× NVMe", fillcolor="#A5D6A7"];
+    osd2 [label="OSD-2\n.2.21\n12× HDD\n2× NVMe", fillcolor="#A5D6A7"];
+    osd3 [label="OSD-3\n.2.22\n12× HDD\n2× NVMe", fillcolor="#A5D6A7"];
+
+    mgmt_net [label="Management\nVLAN 999: 172.16.0.0/24", shape=box, style="filled", fillcolor="#FFE0B2"];
+
+    idrac1 [label="iDRAC/IPMI\nOSD-1", fillcolor="#FFCC80"];
+    idrac2 [label="iDRAC/IPMI\nOSD-2", fillcolor="#FFCC80"];
+    idrac3 [label="iDRAC/IPMI\nOSD-3", fillcolor="#FFCC80"];
+
+    {rank=same; mon1; mon2; mon3;}
+    {rank=same; osd1; osd2; osd3;}
+    {rank=same; idrac1; idrac2; idrac3;}
+
+    clients -> cli_net [dir=none];
+    cli_net -> haproxy;
+    haproxy -> pub_net [dir=none];
+
+    pub_net -> mon1 [dir=none];
+    pub_net -> mon2 [dir=none];
+    pub_net -> mon3 [dir=none];
+
+    mon1 -> clu_net [dir=none];
+    mon2 -> clu_net [dir=none];
+    mon3 -> clu_net [dir=none];
+
+    clu_net -> osd1 [dir=none];
+    clu_net -> osd2 [dir=none];
+    clu_net -> osd3 [dir=none];
+
+    osd1 -> mgmt_net [dir=none];
+    osd2 -> mgmt_net [dir=none];
+    osd3 -> mgmt_net [dir=none];
+
+    mgmt_net -> idrac1 [dir=none];
+    mgmt_net -> idrac2 [dir=none];
+    mgmt_net -> idrac3 [dir=none];
+}
 ```
 
 **VLAN-ы:**

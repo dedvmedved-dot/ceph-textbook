@@ -467,18 +467,53 @@ Ceph по умолчанию — **CP-система** с настраиваем
 
 В традиционных системах (SAN, NAS) логика хранения «зашита» в микрокод специализированного контроллера. Вы покупаете не просто диски, а **закрытую экосистему**: контроллер, полки, прошивки, лицензии. В SDS вы покупаете стандартные серверы и устанавливаете на них ПО, которое управляет всеми дисками как единым пулом.
 
-```
-Традиционное (SAN):                   SDS (Ceph):
-┌──────────────────────────┐        ┌──────────────────────────┐
-│ Железо + Логика           │        │ Стандартное железо (любое)│
-│ (единый вендор)           │        │                            │
-│                            │        │          ↕                 │
-│ ∙ Контроллер (Dell)        │        │ Программная логика (Ceph)  │
-│ ∙ Прошивка (Dell)          │        │                            │
-│ ∙ Диски (сертиф. Dell)     │        │ ∙ Независимость от вендора │
-│ ∙ Лицензии (Dell)          │        │ ∙ API-управление           │
-└──────────────────────────┘        │ ∙ Автоматизация             │
-                                     └──────────────────────────┘
+```dot
+digraph {
+    bgcolor=white
+    rankdir=LR
+    splines=ortho
+    compound=true
+    node [fontname="Arial", fontsize=11, fontcolor=black, shape=box, style="filled,rounded"]
+    edge [fontname="Arial", fontsize=10, fontcolor=black, color="#555555"]
+
+    subgraph cluster_san {
+        label="Традиционное SAN\nЖелезо + Логика (единый вендор)"
+        fontname="Arial" fontsize=12 fontcolor=black
+        color="#EF9A9A" style="filled"
+        fillcolor="#FFEBEE"
+        labeljust=l
+
+        san_title [label="Специализированное\nоборудование" fillcolor="#FFCDD2" fontsize=11]
+        ctrl [label="Контроллер (Dell)" fillcolor="#FFCDD2" fontsize=10]
+        fw [label="Прошивка (Dell)" fillcolor="#FFCDD2" fontsize=10]
+        disks [label="Диски\n(сертиф. Dell)" fillcolor="#FFCDD2" fontsize=10]
+        lic [label="Лицензии (Dell)" fillcolor="#FFCDD2" fontsize=10]
+
+        san_title -> ctrl [style=invis]
+        ctrl -> fw [style=dotted color="#E57373" arrowhead=none]
+        fw -> disks [style=dotted color="#E57373" arrowhead=none]
+        disks -> lic [style=dotted color="#E57373" arrowhead=none]
+    }
+
+    subgraph cluster_sds {
+        label="SDS / Ceph\nСтандартное железо + Программная логика"
+        fontname="Arial" fontsize=12 fontcolor=black
+        color="#90CAF9" style="filled"
+        fillcolor="#E3F2FD"
+        labeljust=l
+
+        sds_title [label="Стандартное железо\n(любой вендор)" fillcolor="#BBDEFB" fontsize=11]
+        sw [label="Программная\nлогика (Ceph)" fillcolor="#BBDEFB" fontsize=10]
+        indep [label="Независимость\nот вендора" fillcolor="#BBDEFB" fontsize=10]
+        api [label="API-\nуправление" fillcolor="#BBDEFB" fontsize=10]
+        auto [label="Автоматизация\n(Ansible/Terraform)" fillcolor="#BBDEFB" fontsize=10]
+
+        sds_title -> sw [color="#42A5F5" penwidth=1.5]
+        sw -> indep [style=dotted color="#64B5F6" arrowhead=none]
+        indep -> api [style=dotted color="#64B5F6" arrowhead=none]
+        api -> auto [style=dotted color="#64B5F6" arrowhead=none]
+    }
+}
 ```
 
 **Что даёт SDS:**

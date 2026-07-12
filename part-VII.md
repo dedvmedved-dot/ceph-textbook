@@ -11,16 +11,22 @@
 
 Ceph предоставляет четыре уровня программного доступа — от самого низкоуровневого до самого высокоуровневого:
 
-```
-┌─────────────────────────────────────────────┐
-│ RGW REST API  (S3/Swift, HTTP)              │ ← Самый высокий уровень
-├─────────────────────────────────────────────┤
-│ libcephfs     (POSIX-файловая система)      │
-├─────────────────────────────────────────────┤
-│ librbd        (блочные устройства)          │
-├─────────────────────────────────────────────┤
-│ librados      (объекты RADOS)               │ ← Самый низкий уровень
-└─────────────────────────────────────────────┘
+```dot
+digraph G {
+    rankdir=TB;
+    bgcolor="white";
+    fontname="Arial";
+    fontcolor="black";
+    node [fontname="Arial" fontcolor="black" style=filled shape=box];
+    edge [fontname="Arial" fontcolor="black"];
+
+    rgw [label="RGW REST API\n(S3/Swift, HTTP)\n← Самый высокий уровень" fillcolor="#CCFFCC"];
+    cephfs [label="libcephfs\n(POSIX-файловая система)" fillcolor="#CCE5FF"];
+    rbd [label="librbd\n(блочные устройства)" fillcolor="#FFFFCC"];
+    rados [label="librados\n(объекты RADOS)\n← Самый низкий уровень" fillcolor="#FFCCCC"];
+
+    rgw -> cephfs -> rbd -> rados [style=bold arrowhead=normal];
+}
 ```
 
 - **librados (C/C++)** — прямой доступ к объектам RADOS. Вы управляете объектами напрямую: создаёте, читаете, удаляете, работаете с xattrs и OMAPA. Все вышележащие уровни (RBD, CephFS, RGW) реализованы поверх librados.
@@ -674,15 +680,22 @@ def count_objects_fast(cluster, pool_name):
 
 Образ RBD — это виртуальный диск. Когда вы записываете в него данные, RBD разбивает запись на **страйпы (stripes)**, каждый страйп — на объекты RADOS фиксированного размера.
 
-```
-Образ RBD (10 GB), order=22 (object size = 4 MB)
+```dot
+digraph G {
+    rankdir=LR;
+    bgcolor="white";
+    fontname="Arial";
+    fontcolor="black";
+    node [fontname="Arial" fontcolor="black" style=filled shape=box];
+    edge [fontname="Arial" fontcolor="black"];
 
-Запись на смещение 6 MB (длина 2 MB):
-┌─────────────────────────────────────────────┐
-│ obj.0000  │ obj.0001  │ obj.0002  │ obj.0003│ ... до 2560 объектов
-│ 0..4 MB   │ 4..8 MB   │ 8..12 MB  │         │
-│           │  [запись] │  [запись] │         │
-└─────────────────────────────────────────────┘
+    obj0 [label="obj.0000\n0..4 MB" fillcolor="#CCFFCC"];
+    obj1 [label="obj.0001\n4..8 MB\n[запись]" fillcolor="#FFCCCC"];
+    obj2 [label="obj.0002\n8..12 MB\n[запись]" fillcolor="#FFCCCC"];
+    obj3 [label="obj.0003\n12..16 MB" fillcolor="#CCE5FF"];
+
+    obj0 -> obj1 -> obj2 -> obj3 [style=invis];
+}
 ```
 
 **Параметры:**
@@ -862,19 +875,35 @@ rbd import-diff /tmp/diff-export.img $POOL/target-image
 
 Важные аспекты производительности:
 
+```dot
+digraph G {
+    rankdir=LR;
+    bgcolor="white";
+    fontname="Arial";
+    fontcolor="black";
+    node [fontname="Arial" fontcolor="black" style=filled shape=box];
+    edge [fontname="Arial" fontcolor="black"];
+
+    l3 [label="Клон L3" fillcolor="#FFCCCC"];
+    l2 [label="Клон L2" fillcolor="#FFCCE5"];
+    l1 [label="Клон L1" fillcolor="#CCE5FF"];
+    l0 [label="Оригинал L0" fillcolor="#CCFFCC"];
+
+    l3 -> l2 [label="читает\n(~200µs)"];
+    l2 -> l1 [label="читает\n(~200µs)"];
+    l1 -> l0 [label="читает\n(~200µs)"];
+
+    label="Глубина цепочки клонов → задержка чтения ↑\nЗадержка: ~3 × доп. hop (по ~200µs каждый)";
+    labelloc="t";
+    fontsize=14;
+}
 ```
-Глубина цепочки клонов → задержка чтения ↑
-┌─────────────────────────────────────────────┐
-│ Клон L3 → читает L2 → читает L1 → читает L0 │
-│ Задержка: ~3 × доп. hop (по ~200µs каждый)  │
-└─────────────────────────────────────────────┘
 
 Рекомендации:
 - Глубина цепочки ≤ 3 для production (каждый слой добавляет ~200µs)
 - При глубине > 5 — flatten промежуточных клонов
 - Flatten — дорогая операция (копирует все блоки), выполняйте
   вне пиковых нагрузок
-```
 
 ```bash
 # Оценка времени flatten:
